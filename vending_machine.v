@@ -12,14 +12,14 @@
 // Description: 
 //
 // Dependencies: 
-//
+//s
 // Revision: 
 // Revision 0.01 - File Created
 // Additional Comments: 
 //
 //////////////////////////////////////////////////////////////////////////////////
 module vending_machine(
-	 //input clk,
+	 input clk,
     input [1:0] item,
     input nickel,
     input dime,
@@ -29,8 +29,7 @@ module vending_machine(
     input info,
     input buy,
 	 output [2:0] output_state,
-	 output [6:0] output_money,
-	 output [2:0] output_coin
+	 output [6:0] output_money
     );
 	 
 	 
@@ -62,7 +61,7 @@ module vending_machine(
 	
 	// Money
 	reg [6:0] current_money;
-	reg [2:0] coin;
+	reg [6:0] next_money;
 	
 	initial begin
 		current_state = PRICE_STATE;
@@ -75,12 +74,30 @@ module vending_machine(
 		quarter_d = 0;
 		display_counter = 0;
 		current_money = 0;
-		coin = 0;
+		next_money = 0;
 	end
 	
-	always @(admin or info) begin
+	always @(negedge clk) begin
+		nickel_d <= {nickel, nickel_d[2:1]};
+		dime_d <= {dime, dime_d[2:1]};
+		quarter_d <= {quarter, quarter_d[2:1]};
 		if (current_state == PRICE_STATE) begin
-			if (admin == 0) begin
+			if (~nickel_d[0] & nickel_d[1]) begin
+					$display("i see nickel\n");
+					next_money = current_money + 5;
+					next_state = BUY_STATE;
+			end
+			else if (~dime_d[0] & dime_d[1]) begin
+					$display("i see dime\n");
+					next_money = current_money + 10;
+					next_state = BUY_STATE;
+			end	
+			else if (~quarter_d[0] & quarter_d[1]) begin
+					$display("i see quarter\n");
+					next_money = current_money + 25;
+					next_state = BUY_STATE;
+			end
+			else if (admin == 0) begin
 				if (info == 1) begin
 					next_state = QUANTITY_STATE;
 				end
@@ -93,7 +110,6 @@ module vending_machine(
 					next_state = UPDATE_STATE;
 				end
 			end
-			current_state = next_state;
 		end
 		else if (current_state == QUANTITY_STATE) begin
 			if (admin == 0) begin
@@ -109,7 +125,7 @@ module vending_machine(
 					next_state = UPDATE_STATE;
 				end
 			end
-			current_state = next_state;
+			//current_state = next_state;
 		end
 		else if (current_state == REVENUE_STATE) begin
 			if (admin == 0) begin
@@ -125,7 +141,7 @@ module vending_machine(
 					next_state = UPDATE_STATE; 
 				end 
 			end
-			current_state = next_state;
+			//current_state = next_state;
 		end
 		else if (current_state == UPDATE_STATE) begin
 			if (admin == 0) begin
@@ -141,33 +157,30 @@ module vending_machine(
 					next_state = REVENUE_STATE; 
 				end 
 			end
-			current_state = next_state;
-		end
-		output_state_temp = next_state;
-	end
-	
-	always @(posedge nickel or posedge dime or posedge quarter) begin
-		if (current_state == PRICE_STATE) begin
-			next_state = BUY_STATE;
+			//current_state = next_state;
 		end
 		else if (current_state == BUY_STATE) begin
-			coin = {nickel, dime, quarter};
-			case (coin)
-				3'b100: current_money = current_money + 5;
-				3'b010: current_money = current_money + 10;
-				3'b001: current_money = current_money + 25;
-				default: current_money = current_money;
-			endcase
+			//$display("------------Buy state----------\n");
+			if (~nickel_d[0] & nickel_d[1]) begin
+				next_money = current_money + 5;
+				next_state = BUY_STATE;
+			end
+			else if (~dime_d[0] & dime_d[1]) begin
+				next_money = current_money + 10;
+				next_state = BUY_STATE;
+			end
+			else if (~quarter_d[0] & quarter_d[1]) begin
+				next_money = current_money + 25;
+				next_state = BUY_STATE;
+			end
+			//current_state = next_state;
 		end
-		else begin
-			next_state = current_state;
-		end
-		current_state = next_state;
 		output_state_temp = next_state;
+		current_state = next_state;
+		current_money = next_money;
 	end
 	
 	assign output_state = output_state_temp;
 	assign output_money = current_money;
-	assign output_coin = coin;
 
 endmodule
