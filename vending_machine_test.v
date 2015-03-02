@@ -38,6 +38,7 @@ module vending_machine_test;
 	// Outputs
 	wire [2:0] output_state;
 	wire [6:0] output_money;
+	wire [6:0] output_change;
 
 	// Instantiate the Unit Under Test (UUT)
 	vending_machine uut (
@@ -51,7 +52,8 @@ module vending_machine_test;
 		.info(info), 
 		.buy(buy), 
 		.output_state(output_state),
-		.output_money(output_money)
+		.output_money(output_money),
+		.output_change(output_change)
 	);
 	
 	
@@ -82,6 +84,10 @@ module vending_machine_test;
 		info = 1;
 		#1000; 		// State: Update - 011
 		admin = 0; 
+		#1000;
+		buy = 1;
+		#1000;
+		buy = 0;
 		#1000; 		// State: Quantity - 001
 		admin = 1; 
 		info = 0; 
@@ -95,6 +101,10 @@ module vending_machine_test;
 		nickel = 1;		// Money: 0000101
 		#10;				// State: Buy - 100
 		nickel = 0;
+		#10;
+		buy = 1;
+		#100;
+		buy = 0;			// Not enough money
 		#1000;
 		nickel = 1;		// Money: 0001010
 		#10;
@@ -107,6 +117,11 @@ module vending_machine_test;
 		quarter = 1;	// Money: 0101101
 		#10;
 		quarter = 0;
+		#10;
+		buy = 1;
+		#100;
+		buy = 0;			// Change: 0001010
+		#100;				// State: Price - 000
 
 	end
 	always

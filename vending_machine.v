@@ -29,7 +29,8 @@ module vending_machine(
     input info,
     input buy,
 	 output [2:0] output_state,
-	 output [6:0] output_money
+	 output [6:0] output_money,
+	 output [6:0] output_change
     );
 	 
 	 
@@ -41,6 +42,7 @@ module vending_machine(
 	parameter BUY_STATE =      4;
 	parameter DONT_CARE = 7'b1111111;
 	parameter PRICE_ITEM_A = 25;
+	parameter ITEM_A_PRICE = 35;
 	
 	// States
 	reg [2:0] current_state;
@@ -62,6 +64,7 @@ module vending_machine(
 	// Money
 	reg [6:0] current_money;
 	reg [6:0] next_money;
+	reg [6:0] change;
 	
 	initial begin
 		current_state = PRICE_STATE;
@@ -75,25 +78,28 @@ module vending_machine(
 		display_counter = 0;
 		current_money = 0;
 		next_money = 0;
+		change = 0;
 	end
 	
 	always @(negedge clk) begin
 		nickel_d <= {nickel, nickel_d[2:1]};
 		dime_d <= {dime, dime_d[2:1]};
 		quarter_d <= {quarter, quarter_d[2:1]};
+		buy_d <= {buy, buy_d[2:1]};
+		// FSM
 		if (current_state == PRICE_STATE) begin
 			if (~nickel_d[0] & nickel_d[1]) begin
-					$display("i see nickel\n");
+//					$display("i see nickel\n");
 					next_money = current_money + 5;
 					next_state = BUY_STATE;
 			end
 			else if (~dime_d[0] & dime_d[1]) begin
-					$display("i see dime\n");
+//					$display("i see dime\n");
 					next_money = current_money + 10;
 					next_state = BUY_STATE;
 			end	
 			else if (~quarter_d[0] & quarter_d[1]) begin
-					$display("i see quarter\n");
+//					$display("i see quarter\n");
 					next_money = current_money + 25;
 					next_state = BUY_STATE;
 			end
@@ -160,8 +166,18 @@ module vending_machine(
 			//current_state = next_state;
 		end
 		else if (current_state == BUY_STATE) begin
-			//$display("------------Buy state----------\n");
-			if (~nickel_d[0] & nickel_d[1]) begin
+			if (~buy_d[0] & buy_d[1]) begin
+				if (current_money == ITEM_A_PRICE) begin
+					next_money = 0;
+					next_state = PRICE_STATE;
+				end
+				else if (current_money > ITEM_A_PRICE) begin
+					next_money = 0;
+					next_state = PRICE_STATE;
+					change = current_money - ITEM_A_PRICE;
+				end
+			end
+			else if (~nickel_d[0] & nickel_d[1]) begin
 				next_money = current_money + 5;
 				next_state = BUY_STATE;
 			end
@@ -182,5 +198,6 @@ module vending_machine(
 	
 	assign output_state = output_state_temp;
 	assign output_money = current_money;
+	assign output_change = change;
 
 endmodule
