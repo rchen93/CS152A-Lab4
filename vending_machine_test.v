@@ -39,6 +39,8 @@ module vending_machine_test;
 	wire [2:0] output_state;
 	wire [6:0] output_money;
 	wire [6:0] output_change;
+	wire [15:0] output_quantity;
+	wire [15:0] output_revenue;
 
 	// Instantiate the Unit Under Test (UUT)
 	vending_machine uut (
@@ -53,7 +55,9 @@ module vending_machine_test;
 		.buy(buy), 
 		.output_state(output_state),
 		.output_money(output_money),
-		.output_change(output_change)
+		.output_change(output_change),
+		.output_quantity(output_quantity),
+		.output_revenue(output_revenue)
 	);
 	
 	
@@ -82,18 +86,18 @@ module vending_machine_test;
 		admin = 1;
 		#1000;			// State: Revenue - 010
 		info = 1;
-		#1000; 		// State: Update - 011
-		admin = 0; 
+		#1000; 			// State: Update - 011
+		admin = 0; 	
 		#1000;
 		buy = 1;
 		#1000;
 		buy = 0;
-		#1000; 		// State: Quantity - 001
+		#1000; 			// State: Quantity - 001
 		admin = 1; 
 		info = 0; 
-		#1000; 		// State: Revenue - 010
+		#1000; 			// State: Revenue - 010
 		//nickel = 1;
-		#1000; 		// State: Revenue - 010
+		#1000; 			// State: Revenue - 010
 		//nickel = 0;
 		admin = 0;
 		info = 0;
@@ -122,7 +126,48 @@ module vending_machine_test;
 		#100;
 		buy = 0;			// Change: 0001010
 		#100;				// State: Price - 000
-
+							// Quantity: 1001
+							// Revenue: 0000000000100011
+		admin = 1;		
+		#1000;			// State: Revenue - 010
+		info = 1;
+		#1000;			// State: Update - 011
+		nickel = 1;
+		#10;
+		nickel = 0;
+		#10;				//	Quantity: 00001110
+		dime = 1;
+		#10;
+		dime = 0;
+		#10;				//	Quantity: 00011000
+		quarter = 1;
+		#10;
+		quarter = 0;
+		#10;				// Quantity: 00110001
+		admin = 0;
+		#1000;
+		info = 0;
+		#1000;			// State: Price - 000
+		nickel = 1;		// Money: 0000101
+		#10;				// State: Buy - 100
+		nickel = 0;
+		#10;
+		rst = 1;			// State: Price - 000
+		#1000;			// Money: 0000000
+		rst = 0;			// Change: 0000101
+		#1000;		   
+		admin = 1;		 
+		#1000;
+		info = 0; 		// State: Revenue 010
+		#1000;
+		rst = 1;
+		#1000;			// Revenue: 0000000000000000
+		rst = 0; 
+		#1000; 
+		info = 1; 		// State: Update - 011
+		#1000;
+		rst = 1;
+		#1000;			// Quantity: 00000000
 	end
 	always
 		#5 clk = ~clk;

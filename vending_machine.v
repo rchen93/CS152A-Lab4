@@ -21,16 +21,23 @@
 module vending_machine(
 	 input clk,
     input [1:0] item,
-    input nickel,
+    input nickel,							// Update Stock Mode: +5
     input dime,
     input quarter,
     input rst,
     input admin,
     input info,
     input buy,
+	 output hsync,
+	 output vsync,
+	 output reg [2:0] RED,
+	 output reg [2:0] GREEN,
+	 output reg [1:0] BLUE,
 	 output [2:0] output_state,
 	 output [6:0] output_money,
-	 output [6:0] output_change
+	 output [6:0] output_change,
+	 output [15:0] output_quantity,
+	 output [15:0] output_revenue
     );
 	 
 	 
@@ -50,7 +57,7 @@ module vending_machine(
 	reg [2:0] output_state_temp;
 	
 	// Buttons
-	reg [2:0] reset_d;
+	reg [2:0] rst_d;
 	reg [2:0] buy_d;
 	reg [2:0] nickel_d;
 	reg [2:0] dime_d;
@@ -60,17 +67,34 @@ module vending_machine(
 	reg [3:0] anode_register;
 	reg [6:0] segment_register;
 	reg [1:0] display_counter;
+	wire hsync_out;
+	wire vsync_out;
+	wire vidon;
+	wire [10:0] PixelX;
+	wire [10:0] PixelY;
+	
+	// Quantity
+	reg [15:0] item_a_quantity;
 	
 	// Money
 	reg [6:0] current_money;
 	reg [6:0] next_money;
 	reg [6:0] change;
+	reg [15:0] revenue;
+	
+	// Clocks
+	wire clkdisplay, clkvga, clkdebounce, clkblink;
+	
+	assign hsync = ~hsync_out;
+	assign vsync = ~vsync_out;
+	
+	clock_divider clocks(.master_clk(clk), .clk_display(clkdisplay), .clk_vga(clkvga), .clk_debounce(clkdebounce), .clk_blink(clkblink));
 	
 	initial begin
 		current_state = PRICE_STATE;
 		next_state = PRICE_STATE;
 		output_state_temp = PRICE_STATE;
-		reset_d = 0;
+		rst_d = 0;
 		buy_d = 0;
 		nickel_d = 0;
 		dime_d = 0;
@@ -79,6 +103,8 @@ module vending_machine(
 		current_money = 0;
 		next_money = 0;
 		change = 0;
+		revenue = 0;
+		item_a_quantity = 10;
 	end
 	
 	always @(negedge clk) begin
@@ -86,6 +112,7 @@ module vending_machine(
 		dime_d <= {dime, dime_d[2:1]};
 		quarter_d <= {quarter, quarter_d[2:1]};
 		buy_d <= {buy, buy_d[2:1]};
+		rst_d <= {rst, rst_d[2:1]};
 		// FSM
 		if (current_state == PRICE_STATE) begin
 			if (~nickel_d[0] & nickel_d[1]) begin
@@ -134,7 +161,11 @@ module vending_machine(
 			//current_state = next_state;
 		end
 		else if (current_state == REVENUE_STATE) begin
-			if (admin == 0) begin
+			if (~rst_d[0] & rst_d[1]) begin
+				revenue = 0;
+				next_state = REVENUE_STATE;
+			end
+			else if (admin == 0) begin
 				if (info == 0) begin
 					next_state = PRICE_STATE;
 				end
@@ -150,7 +181,23 @@ module vending_machine(
 			//current_state = next_state;
 		end
 		else if (current_state == UPDATE_STATE) begin
-			if (admin == 0) begin
+			if (~rst_d[0] & rst_d[1]) begin
+				item_a_quantity = 0;
+				next_state = UPDATE_STATE;
+			end
+			else if (~nickel_d[0] & nickel_d[1]) begin
+				item_a_quantity = item_a_quantity + 5;
+				next_state = UPDATE_STATE;
+			end
+			else if (~dime_d[0] & dime_d[1]) begin
+				item_a_quantity = item_a_quantity + 10;
+				next_state = UPDATE_STATE;
+			end
+			else if (~quarter_d[0] & quarter_d[1]) begin
+				item_a_quantity = item_a_quantity + 25;
+				next_state = UPDATE_STATE;
+			end
+			else if (admin == 0) begin
 				if (info == 0) begin
 					next_state = PRICE_STATE;
 				end
@@ -166,15 +213,27 @@ module vending_machine(
 			//current_state = next_state;
 		end
 		else if (current_state == BUY_STATE) begin
-			if (~buy_d[0] & buy_d[1]) begin
+			if (~rst_d[0] & rst_d[1]) begin
+				next_money = 0;
+				change = current_money;
+				next_state = PRICE_STATE;
+			end
+			else if (~buy_d[0] & buy_d[1]) begin
 				if (current_money == ITEM_A_PRICE) begin
 					next_money = 0;
 					next_state = PRICE_STATE;
+					item_a_quantity = item_a_quantity - 1;
+					revenue = revenue + ITEM_A_PRICE;
 				end
 				else if (current_money > ITEM_A_PRICE) begin
 					next_money = 0;
 					next_state = PRICE_STATE;
 					change = current_money - ITEM_A_PRICE;
+					item_a_quantity = item_a_quantity - 1;
+					revenue = revenue + ITEM_A_PRICE;
+				end
+				else begin
+					next_state = PRICE_STATE;
 				end
 			end
 			else if (~nickel_d[0] & nickel_d[1]) begin
@@ -199,5 +258,7 @@ module vending_machine(
 	assign output_state = output_state_temp;
 	assign output_money = current_money;
 	assign output_change = change;
+	assign output_quantity = item_a_quantity;
+	assign output_revenue = revenue;
 
 endmodule
