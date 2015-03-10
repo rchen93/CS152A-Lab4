@@ -54,6 +54,7 @@ module vending_machine(
 	parameter BUY_STATE =      4;
 	parameter DONT_CARE = 7'b1111111;
 	parameter ITEM_A_PRICE = 16'b0000000000100011;	// 35
+	parameter ITEM_B_PRICE = 16'b0000000000011001;	// 25		NEW
 	
 	// States
 	reg [2:0] current_state;
@@ -90,12 +91,17 @@ module vending_machine(
 		
 	// Quantity
 	reg [15:0] item_a_quantity;
+	reg [15:0] item_b_quantity;		// NEW
 	
 	// Money
 	reg [6:0] current_money;
 	reg [6:0] next_money;
 	reg [6:0] change;
 	reg [15:0] revenue;
+	
+	// Current Item  NEW
+	reg [15:0] item_price;
+	reg [15:0] item_quantity;
 	
 	// Clocks
 	wire clkdisplay, clkvga, clkdebounce, clkblink;
@@ -117,8 +123,11 @@ module vending_machine(
 		change = 0;
 		revenue = 0;
 		item_a_quantity = 10;
+		item_b_quantity = 5;			// NEW
 		ss_display_counter = 0;
 		bcd_value = ITEM_A_PRICE;
+		item_price = ITEM_A_PRICE;
+		item_quantity = item_a_quantity;
 	end
 	
 	assign ones = ones_temp;
@@ -132,21 +141,30 @@ module vending_machine(
 		quarter_d <= {quarter, quarter_d[2:1]};
 		buy_d <= {buy, buy_d[2:1]};
 		rst_d <= {rst, rst_d[2:1]};
+
+		// Item A selected
+//		if (item == 2'b00) begin
+//			item_price = ITEM_A_PRICE;
+//			item_quantity = item_a_quantity;
+//		end
+		// Item B Selected
+//		else if (item == 2'b01) begin
+//			item_price = ITEM_B_PRICE;
+//			item_quantity = item_b_quantity;
+//		end
+
 		// FSM
 		if (current_state == PRICE_STATE) begin
 			bcd_value = ITEM_A_PRICE;
 			if (~nickel_d[0] & nickel_d[1]) begin
-//					$display("i see nickel\n");
 					next_money = current_money + 5;
 					next_state = BUY_STATE;
 			end
 			else if (~dime_d[0] & dime_d[1]) begin
-//					$display("i see dime\n");
 					next_money = current_money + 10;
 					next_state = BUY_STATE;
 			end	
 			else if (~quarter_d[0] & quarter_d[1]) begin
-//					$display("i see quarter\n");
 					next_money = current_money + 25;
 					next_state = BUY_STATE;
 			end
@@ -236,6 +254,7 @@ module vending_machine(
 			//current_state = next_state;
 		end
 		else if (current_state == BUY_STATE) begin
+			bcd_value = current_money;						// NEW 
 			if (~rst_d[0] & rst_d[1]) begin
 				next_money = 0;
 				change = current_money;
@@ -282,6 +301,7 @@ module vending_machine(
 		current_money = next_money;
 	end
 	
+	// Display
 	always @(posedge clkdisplay) begin
 		case (ss_display_counter)
 			0: begin
