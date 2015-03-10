@@ -41,6 +41,12 @@ module vending_machine_test;
 	wire [6:0] output_change;
 	wire [15:0] output_quantity;
 	wire [15:0] output_revenue;
+	wire [3:0] ones; // rightmost
+	wire [3:0] tens; 
+   wire [3:0] hundreds; 
+	wire [3:0] D4; // leftmost
+	wire [3:0] anode; 
+	wire [6:0] seg_display; 
 
 	// Instantiate the Unit Under Test (UUT)
 	vending_machine uut (
@@ -57,7 +63,13 @@ module vending_machine_test;
 		.output_money(output_money),
 		.output_change(output_change),
 		.output_quantity(output_quantity),
-		.output_revenue(output_revenue)
+		.output_revenue(output_revenue),
+		.ones(ones), // rightmost
+	   .tens(tens), 
+	   .hundreds(hundreds), 
+	   .D4(D4), // leftmost
+	   .anode(anode), 
+	   .seg_display(seg_display) 
 	);
 
 	initial begin
