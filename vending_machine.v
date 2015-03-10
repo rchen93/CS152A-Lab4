@@ -55,6 +55,8 @@ module vending_machine(
 	parameter DONT_CARE = 7'b1111111;
 	parameter ITEM_A_PRICE = 16'b0000000000100011;	// 35
 	parameter ITEM_B_PRICE = 16'b0000000000011001;	// 25		NEW
+	parameter DISPLAY_D = 7'b1000000;
+	parameter DISPLAY_C = 7'b1000110;
 	
 	// States
 	reg [2:0] current_state;
@@ -88,6 +90,8 @@ module vending_machine(
 	wire [3:0] tens_bcd;
 	wire [3:0] ones_bcd;
 	reg [15:0] bcd_value;
+	
+	reg [2:0] D4_flag;		// Should we display 'D' or 'C' 	D:01  C: 10
 		
 	// Quantity
 	reg [15:0] item_a_quantity;
@@ -128,6 +132,7 @@ module vending_machine(
 		bcd_value = ITEM_A_PRICE;
 		item_price = ITEM_A_PRICE;
 		item_quantity = item_a_quantity;
+		D4_flag = 0;
 	end
 	
 	assign ones = ones_temp;
@@ -135,7 +140,8 @@ module vending_machine(
 	assign hundreds = hundreds_temp;
 	assign D4 = D4_temp;
 	
-	always @(negedge clk) begin
+	// FSM
+	always @(posedge clkdebounce) begin
 		nickel_d <= {nickel, nickel_d[2:1]};
 		dime_d <= {dime, dime_d[2:1]};
 		quarter_d <= {quarter, quarter_d[2:1]};
@@ -268,6 +274,7 @@ module vending_machine(
 					item_a_quantity = item_a_quantity - 1;
 					revenue = revenue + ITEM_A_PRICE;
 					// Set D4_temp to indicate D
+					D4_flag = 2'b01;
 				end
 				else if (current_money > ITEM_A_PRICE) begin
 					next_money = 0;
@@ -275,11 +282,13 @@ module vending_machine(
 					change = current_money - ITEM_A_PRICE;
 					item_a_quantity = item_a_quantity - 1;
 					revenue = revenue + ITEM_A_PRICE;
-					
+	
 					// Set D4_temp to indicate C
+					D4_flag = 2'b10;
+					bcd_value = change;
 				end
 				else begin
-					next_state = PRICE_STATE;
+					next_state = BUY_STATE;
 				end
 			end
 			else if (~nickel_d[0] & nickel_d[1]) begin
@@ -297,7 +306,7 @@ module vending_machine(
 			//current_state = next_state;
 		end
 		output_state_temp = next_state;
-		current_state = next_state;
+		current_state <= next_state;
 		current_money = next_money;
 	end
 	
@@ -305,8 +314,16 @@ module vending_machine(
 	always @(posedge clkdisplay) begin
 		case (ss_display_counter)
 			0: begin
+				if (D4_flag == 2'b01) begin
+					ss_anode_register = 4'b0111;
+					ss_segment_register = DISPLAY_D;
+				end
+				else if (D4_flag == 2'b10) begin
+					ss_anode_register = 4'b0111;
+					ss_segment_register = DISPLAY_C;
+				end
 				// Price
-				if (!admin && !info) begin
+				else if (!admin && !info) begin
 					ss_anode_register = 4'b0111;
 					ss_segment_register = DONT_CARE;
 				end
@@ -327,8 +344,16 @@ module vending_machine(
 				end
 			end
 			1: begin
+				if (D4_flag == 2'b01) begin
+					ss_anode_register = 4'b1011;
+					ss_segment_register = DONT_CARE;
+				end
+				else if (D4_flag == 2'b10) begin
+					ss_anode_register = 4'b1011;
+					ss_segment_register = display_hundreds;
+				end
 				// Price
-				if (!admin && !info) begin
+				else if (!admin && !info) begin
 					ss_anode_register = 4'b1011;
 					ss_segment_register = display_hundreds;
 				end
@@ -349,8 +374,16 @@ module vending_machine(
 				end
 			end
 			2: begin
+				if (D4_flag == 2'b01) begin
+					ss_anode_register = 4'b1101;
+					ss_segment_register = DONT_CARE;
+				end
+				else if (D4_flag == 2'b10) begin
+					ss_anode_register = 4'b1101;
+					ss_segment_register = display_tens;
+				end
 				// Price
-				if (!admin && !info) begin
+				else if (!admin && !info) begin
 					ss_anode_register = 4'b1101;
 					ss_segment_register = display_tens;
 				end
@@ -371,8 +404,16 @@ module vending_machine(
 				end
 			end
 			3: begin
+				if (D4_flag == 2'b01) begin
+					ss_anode_register = 4'b1110;
+					ss_segment_register = DONT_CARE;
+				end
+				else if (D4_flag == 2'b10) begin
+					ss_anode_register = 4'b1110;
+					ss_segment_register = display_ones;
+				end
 				// Price
-				if (!admin && !info) begin
+				else if (!admin && !info) begin
 					ss_anode_register = 4'b1110;
 					ss_segment_register = display_ones;
 				end
