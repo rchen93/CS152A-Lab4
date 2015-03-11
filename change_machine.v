@@ -25,6 +25,8 @@ module change_machine(
     output [3:0] quarter
     );
 	 
+	 integer i;
+	 
 	 reg [6:0] change_temp;
 	 reg [3:0] num_nickel;
 	 reg [3:0] num_dime;
@@ -40,30 +42,31 @@ module change_machine(
 		remainder[0] = 0;		// dime
 		remainder[1] = 0;		// quarter
 		
-		while (change_temp > 0) begin
-			remainder[1] = (change_temp % 25);
-			remainder[0] = (change_temp % 10);
-			
-			
-			if (change_temp < 10) begin
-				num_nickel = 1;
-				change_temp = 0;
-			end
-			else if (remainder[1] == 0) begin
-				num_quarter = change_temp / 25;
-				change_temp = 0;
-			end
-			else if (remainder[0] == 0) begin
-				num_dime = change_temp / 10;
-				change_temp = 0;
-			end
-			else if (remainder[1] > remainder[0]) begin
-				num_dime = num_dime + (change_temp / 10);
-				change_temp = remainder[0];
-			end
-			else begin
-				num_quarter = num_quarter + (change_temp / 25);
-				change_temp = remainder[1];
+		for (i=0; i < 100; i=i+1) begin
+			if (change_temp > 0) begin
+				remainder[1] = (change_temp % 25);
+				remainder[0] = (change_temp % 10);
+				
+				if (change_temp < 10) begin
+					num_nickel = 1;
+					change_temp = 0;
+				end
+				else if (remainder[1] == 0) begin
+					num_quarter = change_temp / 25;
+					change_temp = 0;
+				end
+				else if (remainder[0] == 0) begin
+					num_dime = change_temp / 10;
+					change_temp = 0;
+				end
+				else if (remainder[1] > remainder[0]) begin
+					num_dime = num_dime + (change_temp / 10);
+					change_temp = remainder[0];
+				end
+				else begin
+					num_quarter = num_quarter + (change_temp / 25);
+					change_temp = remainder[1];
+				end
 			end
 		end
 	 end
